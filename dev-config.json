@@ -1,0 +1,17 @@
+{
+  "http-server" : {
+    "address" : ":8080",
+    "read-timeout" : "10",
+    "write-timeout" : "10"
+  },
+
+  "db-server" : {
+    "host" : "localhost",
+    "port" : "5432",
+    "user-id" : "vinay",
+    "secret" : "",
+    "db-name" : "vinay",
+    "ssl-mode"  : "disable",
+    "connect_timeout"  : "10"
+  }
+}
