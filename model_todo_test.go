@@ -10,10 +10,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-var config = "dev-config"
 var db *sql.DB
 
-func TestMain(t *testing.T) {
+func TestMainModel(t *testing.T) {
+	var config = "dev-config"
+
 	viper.SetConfigType("json")
 	viper.SetConfigName(config)
 	viper.AddConfigPath(".")

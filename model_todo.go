@@ -8,15 +8,16 @@ import (
 
 //ToDo ...
 type ToDo struct {
-	ID      int64     `json:"id"`
-	Task    string    `json:"task"`
-	Created time.Time `json:"created_date,omitempty"`
-	Updated time.Time `json:"updated_date,omitempty"`
+	ID        int64     `json:"id"`
+	Task      string    `json:"task"`
+	Created   time.Time `json:"created_date,omitempty"`
+	Updated   time.Time `json:"updated_date,omitempty"`
+	Completed bool
 }
 
 func (t *ToDo) addToDo(db *sql.DB) error {
 	time := time.Now().UTC()
-	result, err := db.Exec("INSERT INTO todos(task, created_ts, updated_ts) VALUES($1, $2, $3)", t.Task, time, time)
+	result, err := db.Exec("INSERT INTO todos(task, completed, created_ts, updated_ts) VALUES($1, $2, $3, $4)", t.Task, false, time, time)
 	if err != nil {
 		return err
 	}
@@ -27,9 +28,9 @@ func (t *ToDo) addToDo(db *sql.DB) error {
 }
 
 func (t *ToDo) getToDo(db *sql.DB) error {
-	row := db.QueryRow("SELECT id, task, created_ts, updated_ts FROM todos WHERE id = $1", t.ID)
+	row := db.QueryRow("SELECT id, task, completed, created_ts, updated_ts FROM todos WHERE id = $1", t.ID)
 
-	if err := row.Scan(&t.ID, &t.Task, &t.Created, &t.Updated); err != nil {
+	if err := row.Scan(&t.ID, &t.Task, &t.Completed, &t.Created, &t.Updated); err != nil {
 		return err
 	}
 
@@ -37,12 +38,8 @@ func (t *ToDo) getToDo(db *sql.DB) error {
 }
 
 func (t *ToDo) getToDos(db *sql.DB, start, count int) ([]ToDo, error) {
-	statement := fmt.Sprintf("SELECT id, task, created_ts, updated_ts FROM todos LIMIT %d OFFSET %d", count, start)
-	rows, err := db.Query(statement)
-
-	if err != nil {
-		return nil, err
-	}
+	statement := fmt.Sprintf("SELECT id, task, completed, created_ts, updated_ts FROM todos LIMIT %d OFFSET %d", count, start)
+	rows, _ := db.Query(statement)
 
 	defer rows.Close()
 
@@ -50,9 +47,7 @@ func (t *ToDo) getToDos(db *sql.DB, start, count int) ([]ToDo, error) {
 
 	for rows.Next() {
 		var t ToDo
-		if err := rows.Scan(&t.ID, &t.Task, &t.Created, &t.Updated); err != nil {
-			return nil, err
-		}
+		rows.Scan(&t.ID, &t.Task, &t.Completed, &t.Created, &t.Updated)
 		todos = append(todos, t)
 	}
 
@@ -62,7 +57,7 @@ func (t *ToDo) getToDos(db *sql.DB, start, count int) ([]ToDo, error) {
 func (t *ToDo) updateToDo(db *sql.DB) error {
 	time := time.Now().UTC()
 
-	result, err := db.Exec("UPDATE todos SET task=$1, updated_ts=$2 WHERE id=$3", t.Task, time, t.ID)
+	result, err := db.Exec("UPDATE todos SET task=$1, completed=$2, updated_ts=$3 WHERE id=$4", t.Task, t.Completed, time, t.ID)
 	if err != nil {
 		return err
 	}
@@ -74,10 +69,7 @@ func (t *ToDo) updateToDo(db *sql.DB) error {
 
 func (t *ToDo) deleteToDo(db *sql.DB) error {
 	statement := fmt.Sprintf("DELETE FROM todos WHERE id=%d", t.ID)
-	result, err := db.Exec(statement)
-	if err != nil {
-		return err
-	}
+	result, _ := db.Exec(statement)
 
 	if count, _ := result.RowsAffected(); count == 0 {
 		return sql.ErrNoRows
@@ -95,6 +87,7 @@ func (t *ToDo) createDB(db *sql.DB) error {
 	(
 	    id SERIAL PRIMARY KEY,
 	    task VARCHAR(50) NOT NULL,
+			completed boolean NULL,
 			created_ts timestamptz NOT NULL,
 			updated_ts timestamptz NOT NULL
 	)`
